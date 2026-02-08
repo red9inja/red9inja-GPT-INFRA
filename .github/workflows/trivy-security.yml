@@ -1,0 +1,90 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches: [dev, test, staging, prod]
+  pull_request:
+    branches: [dev, test, staging, prod]
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM
+
+jobs:
+  trivy-repo-scan:
+    name: Trivy Repository Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Upload Trivy Results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-fs-results.sarif'
+      
+      - name: Run Trivy Config Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+
+  trivy-iac-scan:
+    name: Trivy IaC Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Scan Terraform Files
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'terraform/'
+          format: 'json'
+          output: 'trivy-terraform.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Scan Kubernetes Manifests
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'k8s/'
+          format: 'json'
+          output: 'trivy-k8s.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Upload IaC Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: trivy-iac-reports
+          path: |
+            trivy-terraform.json
+            trivy-k8s.json
+
+  trivy-secret-scan:
+    name: Trivy Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Scan for Secrets
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'secret'
+          format: 'table'
+          exit-code: '1'
