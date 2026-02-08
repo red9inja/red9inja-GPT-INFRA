@@ -3,8 +3,12 @@ name: Trivy Security Scan
 on:
   push:
     branches: [dev, test, staging, prod]
+    branches-ignore:
+      - main
   pull_request:
     branches: [dev, test, staging, prod]
+    branches-ignore:
+      - main
   schedule:
     - cron: '0 3 * * *'  # Daily at 3 AM
 
