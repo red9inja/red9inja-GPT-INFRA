@@ -13,6 +13,19 @@ on:
       - test
       - staging
       - prod
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+  repository_dispatch:
+    types: [trigger-deployment]
 
 env:
   TF_VERSION: 1.6.0
@@ -41,7 +54,13 @@ jobs:
 
     - name: Set environment variables
       run: |
-        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          BRANCH_NAME=${{ github.event.inputs.environment }}
+        elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+          BRANCH_NAME=${{ github.event.client_payload.environment }}
+        else
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        fi
         echo "ENVIRONMENT=$BRANCH_NAME" >> $GITHUB_ENV
         echo "CLUSTER_NAME=red9inja-gpt-$BRANCH_NAME" >> $GITHUB_ENV
 
