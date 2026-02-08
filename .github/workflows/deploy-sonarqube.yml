@@ -1,0 +1,148 @@
+name: Deploy SonarQube
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy SonarQube'
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-sonarqube:
+    name: Deploy SonarQube to EKS
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.6.0
+        terraform_wrapper: false
+
+    - name: Get RDS credentials
+      id: rds
+      working-directory: ./terraform
+      run: |
+        terraform init
+        RDS_ENDPOINT=$(terraform output -raw sonarqube_db_endpoint)
+        SECRET_ID=$(terraform output -raw sonarqube_secret_id)
+        
+        echo "endpoint=$RDS_ENDPOINT" >> $GITHUB_OUTPUT
+        echo "secret_id=$SECRET_ID" >> $GITHUB_OUTPUT
+
+    - name: Get database password
+      id: password
+      run: |
+        PASSWORD=$(aws secretsmanager get-secret-value \
+          --secret-id ${{ steps.rds.outputs.secret_id }} \
+          --query SecretString --output text | jq -r '.password')
+        echo "::add-mask::$PASSWORD"
+        echo "password=$PASSWORD" >> $GITHUB_OUTPUT
+
+    - name: Configure kubectl
+      run: |
+        CLUSTER_NAME="red9inja-gpt-${{ github.event.inputs.environment }}"
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name $CLUSTER_NAME
+
+    - name: Create namespace
+      run: |
+        kubectl create namespace sonarqube --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create database secret
+      run: |
+        kubectl create secret generic sonarqube-db \
+          --from-literal=username=sonarqube \
+          --from-literal=password="${{ steps.password.outputs.password }}" \
+          --from-literal=jdbc-url="jdbc:postgresql://${{ steps.rds.outputs.endpoint }}:5432/sonarqube" \
+          --namespace=sonarqube \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy SonarQube
+      run: |
+        kubectl apply -f k8s/sonarqube.yaml
+
+    - name: Wait for deployment
+      run: |
+        kubectl wait --for=condition=available --timeout=600s \
+          deployment/sonarqube -n sonarqube
+
+    - name: Get SonarQube URL
+      id: url
+      run: |
+        echo "Waiting for Load Balancer..."
+        sleep 30
+        
+        LB_URL=$(kubectl get service sonarqube -n sonarqube \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        echo "url=http://$LB_URL" >> $GITHUB_OUTPUT
+        echo "SonarQube URL: http://$LB_URL"
+
+    - name: Wait for SonarQube to be ready
+      run: |
+        LB_URL=$(kubectl get service sonarqube -n sonarqube \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        echo "Waiting for SonarQube to start..."
+        for i in {1..30}; do
+          if curl -s -o /dev/null -w "%{http_code}" http://$LB_URL/api/system/status | grep -q "200"; then
+            echo "SonarQube is ready!"
+            exit 0
+          fi
+          echo "Attempt $i/30: SonarQube not ready yet..."
+          sleep 10
+        done
+        echo "SonarQube did not become ready in time"
+        exit 1
+
+    - name: Generate admin token
+      id: token
+      run: |
+        LB_URL=$(kubectl get service sonarqube -n sonarqube \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        # Generate token using default admin credentials
+        TOKEN=$(curl -s -u admin:admin -X POST \
+          "http://$LB_URL/api/user_tokens/generate?name=github-actions" \
+          | jq -r '.token')
+        
+        echo "::add-mask::$TOKEN"
+        echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+    - name: Create project
+      run: |
+        LB_URL=$(kubectl get service sonarqube -n sonarqube \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        curl -s -u admin:admin -X POST \
+          "http://$LB_URL/api/projects/create?name=red9inja-gpt&project=red9inja-gpt"
+
+    - name: Deployment Summary
+      run: |
+        echo "SonarQube Deployment Complete!"
+        echo "URL: ${{ steps.url.outputs.url }}"
+        echo "Username: admin"
+        echo "Password: admin (CHANGE THIS!)"
+        echo ""
+        echo "Add these to GitHub Secrets:"
+        echo "SONAR_HOST_URL: ${{ steps.url.outputs.url }}"
+        echo "SONAR_TOKEN: ${{ steps.token.outputs.token }}"
