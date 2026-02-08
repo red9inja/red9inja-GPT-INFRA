@@ -1,17 +1,62 @@
 # red9inja-GPT-INFRA
 
-Complete Terraform infrastructure to deploy red9inja-GPT on AWS EKS (Elastic Kubernetes Service).
+Complete Terraform infrastructure with GitHub Actions CI/CD to deploy red9inja-GPT on AWS EKS.
 
-## Overview
+## Features
 
-This repository contains Infrastructure as Code (IaC) using Terraform to provision and deploy the red9inja-GPT model on AWS with:
-
+- Automated CI/CD with GitHub Actions
+- Multi-environment support (dev, test, staging, prod)
 - EKS Cluster with GPU nodes
-- VPC with public and private subnets
-- ECR for Docker images
-- Load Balancer for API access
-- Auto-scaling configuration
-- Monitoring and logging
+- Auto-scaling and load balancing
+- Docker image build and push to ECR
+- Infrastructure as Code with Terraform
+
+## Quick Start
+
+### 1. Setup GitHub Secrets
+
+Add to repository secrets:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
+### 2. Create S3 Bucket for Terraform State
+
+```bash
+aws s3 mb s3://red9inja-terraform-state --region us-east-1
+```
+
+### 3. Create and Push to Branch
+
+```bash
+git checkout -b dev
+git push origin dev
+```
+
+GitHub Actions will automatically:
+- Create EKS cluster
+- Build Docker image
+- Deploy application
+- Expose via Load Balancer
+
+## CI/CD Pipeline
+
+### Automated Deployment Flow
+
+```
+Push to Branch → GitHub Actions → Terraform Apply → Build Docker → Push to ECR → Deploy to EKS
+```
+
+Branches:
+- `dev` → dev environment
+- `test` → test environment
+- `staging` → staging environment
+- `prod` → production environment
+
+### Workflows
+
+1. **terraform-cicd.yml** - Main deployment pipeline
+2. **docker-build.yml** - Build and push Docker images
+3. **terraform-destroy.yml** - Manual cleanup
 
 ## Architecture
 

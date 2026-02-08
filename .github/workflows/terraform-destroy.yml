@@ -1,0 +1,76 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to destroy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+          - staging
+          - prod
+      confirm:
+        description: 'Type "destroy" to confirm'
+        required: true
+
+env:
+  TF_VERSION: 1.6.0
+  AWS_REGION: us-east-1
+
+jobs:
+  destroy:
+    name: Destroy Infrastructure
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate confirmation
+      run: |
+        if [ "${{ github.event.inputs.confirm }}" != "destroy" ]; then
+          echo "Confirmation failed. You must type 'destroy' to proceed."
+          exit 1
+        fi
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Set environment variables
+      run: |
+        echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+        echo "CLUSTER_NAME=red9inja-gpt-${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+
+    - name: Configure kubectl
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.CLUSTER_NAME }} || true
+
+    - name: Delete Kubernetes resources
+      run: |
+        kubectl delete -f k8s/ --ignore-not-found=true || true
+
+    - name: Terraform Init
+      working-directory: ./terraform
+      run: terraform init
+
+    - name: Terraform Destroy
+      working-directory: ./terraform
+      run: |
+        terraform destroy -auto-approve \
+          -var="environment=${{ env.ENVIRONMENT }}" \
+          -var="cluster_name=${{ env.CLUSTER_NAME }}"
+
+    - name: Cleanup complete
+      run: echo "Infrastructure destroyed for ${{ env.ENVIRONMENT }}"
