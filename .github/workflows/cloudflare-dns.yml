@@ -5,6 +5,11 @@ on:
     workflows: ["Terraform CI/CD"]
     types:
       - completed
+    branches:
+      - dev
+      - test
+      - staging
+      - prod
 
 env:
   DOMAIN: vmind.online
