@@ -105,6 +105,19 @@ Add:
 5. **Firewall** - WAF rules
 6. **Caching** - Improved performance
 
+## Automatic Security Features Enabled
+
+When you deploy, these security features are automatically enabled:
+
+1. **Proxy (Orange Cloud)** - All traffic through Cloudflare
+2. **Always Use HTTPS** - HTTP automatically redirects to HTTPS
+3. **Automatic HTTPS Rewrites** - Fixes mixed content
+4. **SSL/TLS Full** - Encrypted connection to origin
+5. **Bot Fight Mode** - Blocks malicious bots
+6. **Security Level: Medium** - Challenge suspicious visitors
+7. **Browser Integrity Check** - Validates browser headers
+8. **DDoS Protection** - Always active, automatic mitigation
+
 ## Access Your Application
 
 After deployment (5-10 minutes):

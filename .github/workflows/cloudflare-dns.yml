@@ -69,6 +69,52 @@ jobs:
         token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         zone: ${{ env.DOMAIN }}
 
+    - name: Enable Cloudflare Security Features
+      run: |
+        ZONE_ID=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=${{ env.DOMAIN }}" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" | jq -r '.result[0].id')
+        
+        echo "Zone ID: $ZONE_ID"
+        
+        # Enable Always Use HTTPS
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/always_use_https" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"on"}'
+        
+        # Enable Automatic HTTPS Rewrites
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/automatic_https_rewrites" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"on"}'
+        
+        # Set SSL to Full
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/ssl" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"full"}'
+        
+        # Enable Bot Fight Mode
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/bot_fight_mode" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"on"}'
+        
+        # Set Security Level to Medium
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/security_level" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"medium"}'
+        
+        # Enable Browser Integrity Check
+        curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/settings/browser_check" \
+          -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          --data '{"value":"on"}'
+        
+        echo "Cloudflare security features enabled!"
+
     - name: DNS Updated
       run: |
         echo "DNS record updated successfully!"
