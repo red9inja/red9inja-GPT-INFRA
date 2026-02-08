@@ -68,6 +68,14 @@ spec:
           value: "CLUSTER_NAME-conversations"
         - name: DYNAMODB_MESSAGES_TABLE
           value: "CLUSTER_NAME-messages"
+        - name: REDIS_HOST
+          value: "REDIS_ENDPOINT"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: SQS_QUEUE_URL
+          value: "SQS_QUEUE_URL"
+        - name: RATE_LIMIT_PER_MINUTE
+          value: "60"
         livenessProbe:
           httpGet:
             path: /health
