@@ -1,8 +1,24 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sonarqube
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonarqube-db
+  namespace: sonarqube
+type: Opaque
+stringData:
+  username: sonarqube
+  password: REPLACE_WITH_RDS_PASSWORD
+  jdbc-url: jdbc:postgresql://RDS_ENDPOINT:5432/sonarqube
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sonarqube
-  namespace: monitoring
+  namespace: sonarqube
 spec:
   replicas: 1
   selector:
@@ -13,51 +29,102 @@ spec:
       labels:
         app: sonarqube
     spec:
+      initContainers:
+      - name: init-sysctl
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          sysctl -w vm.max_map_count=524288
+          sysctl -w fs.file-max=131072
+        securityContext:
+          privileged: true
       containers:
       - name: sonarqube
-        image: sonarqube:community
+        image: sonarqube:10-community
         ports:
         - containerPort: 9000
+          name: http
         env:
         - name: SONAR_JDBC_URL
-          value: "jdbc:postgresql://postgres:5432/sonarqube"
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-db
+              key: jdbc-url
         - name: SONAR_JDBC_USERNAME
           valueFrom:
             secretKeyRef:
-              name: sonarqube-secrets
-              key: db-username
+              name: sonarqube-db
+              key: username
         - name: SONAR_JDBC_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: sonarqube-secrets
-              key: db-password
+              name: sonarqube-db
+              key: password
         resources:
           requests:
             memory: "2Gi"
-            cpu: "1"
+            cpu: "1000m"
           limits:
             memory: "4Gi"
-            cpu: "2"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /api/system/status
+            port: 9000
+          initialDelaySeconds: 120
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/system/status
+            port: 9000
+          initialDelaySeconds: 60
+          periodSeconds: 10
         volumeMounts:
         - name: sonarqube-data
           mountPath: /opt/sonarqube/data
         - name: sonarqube-extensions
           mountPath: /opt/sonarqube/extensions
-        - name: sonarqube-logs
-          mountPath: /opt/sonarqube/logs
       volumes:
       - name: sonarqube-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: sonarqube-data
       - name: sonarqube-extensions
-        emptyDir: {}
-      - name: sonarqube-logs
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: sonarqube-extensions
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-data
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarqube-extensions
+  namespace: sonarqube
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: sonarqube
-  namespace: monitoring
+  namespace: sonarqube
 spec:
   type: LoadBalancer
   selector:
@@ -65,55 +132,4 @@ spec:
   ports:
   - port: 80
     targetPort: 9000
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: monitoring
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:13
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: sonarqube
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: sonarqube-secrets
-              key: db-username
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: sonarqube-secrets
-              key: db-password
-        volumeMounts:
-        - name: postgres-data
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-data
-        emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: monitoring
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
+    protocol: TCP

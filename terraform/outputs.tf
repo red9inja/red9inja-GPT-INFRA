@@ -94,3 +94,13 @@ output "sqs_queue_url" {
   description = "SQS queue URL"
   value       = aws_sqs_queue.generation_queue.url
 }
+
+output "sonarqube_db_endpoint" {
+  description = "SonarQube RDS endpoint"
+  value       = aws_db_instance.sonarqube.address
+}
+
+output "sonarqube_secret_id" {
+  description = "SonarQube database secret ID"
+  value       = aws_secretsmanager_secret.sonarqube_db.id
+}
