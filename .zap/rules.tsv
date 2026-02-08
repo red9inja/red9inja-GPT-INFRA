@@ -1,0 +1,11 @@
+# ZAP Scanning Rules
+# Format: rule_id	WARN/IGNORE	description
+
+10021	WARN	X-Content-Type-Options Header Missing
+10020	WARN	X-Frame-Options Header Not Set
+10017	WARN	Cross-Domain JavaScript Source File Inclusion
+10015	WARN	Re-examine Cache-control Directives
+10011	WARN	Cookie Without Secure Flag
+10010	WARN	Cookie Without HttpOnly Flag
+10009	WARN	In Page Banner Information Leak
+10003	WARN	Vulnerable JS Library
