@@ -1,0 +1,79 @@
+name: Update Cloudflare DNS
+
+on:
+  workflow_run:
+    workflows: ["Terraform CI/CD"]
+    types:
+      - completed
+
+env:
+  DOMAIN: vmind.online
+
+jobs:
+  update-dns:
+    name: Update Cloudflare DNS Record
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Get environment from branch
+      id: env
+      run: |
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        echo "environment=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        
+        # Set subdomain based on branch
+        if [ "$BRANCH_NAME" == "prod" ]; then
+          echo "subdomain=gpt" >> $GITHUB_OUTPUT
+        else
+          echo "subdomain=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get Load Balancer DNS
+      id: alb
+      run: |
+        CLUSTER_NAME="red9inja-gpt-${{ steps.env.outputs.environment }}"
+        
+        # Wait for service to be ready
+        aws eks update-kubeconfig --region us-east-1 --name $CLUSTER_NAME
+        
+        # Get load balancer hostname
+        LB_HOSTNAME=$(kubectl get service red9inja-gpt-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        if [ -z "$LB_HOSTNAME" ]; then
+          echo "Load balancer not ready yet"
+          exit 1
+        fi
+        
+        echo "hostname=$LB_HOSTNAME" >> $GITHUB_OUTPUT
+        echo "Load Balancer: $LB_HOSTNAME"
+
+    - name: Update Cloudflare DNS
+      uses: rez0n/create-dns-record@v2.1
+      with:
+        type: "CNAME"
+        name: "${{ steps.env.outputs.subdomain }}"
+        content: "${{ steps.alb.outputs.hostname }}"
+        ttl: 1
+        proxied: true
+        token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        zone: ${{ env.DOMAIN }}
+
+    - name: DNS Updated
+      run: |
+        echo "DNS record updated successfully!"
+        echo "Domain: ${{ steps.env.outputs.subdomain }}.${{ env.DOMAIN }}"
+        echo "Points to: ${{ steps.alb.outputs.hostname }}"
+        echo ""
+        echo "Access your application at:"
+        echo "https://${{ steps.env.outputs.subdomain }}.${{ env.DOMAIN }}"

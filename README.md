@@ -18,6 +18,7 @@ Complete Terraform infrastructure with GitHub Actions CI/CD to deploy red9inja-G
 Add to repository secrets:
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
+- `CLOUDFLARE_API_TOKEN`
 
 ### 2. Create S3 Bucket for Terraform State
 
@@ -36,7 +37,15 @@ GitHub Actions will automatically:
 - Create EKS cluster
 - Build Docker image
 - Deploy application
-- Expose via Load Balancer
+- Create DNS record in Cloudflare
+- Application accessible at: https://dev.vmind.online
+
+## Domains by Branch
+
+- `dev` → https://dev.vmind.online
+- `test` → https://test.vmind.online
+- `staging` → https://staging.vmind.online
+- `prod` → https://gpt.vmind.online
 
 ## CI/CD Pipeline
 
