@@ -21,6 +21,10 @@ spec:
       - key: nvidia.com/gpu
         operator: Exists
         effect: NoSchedule
+      volumes:
+      - name: user-data
+        persistentVolumeClaim:
+          claimName: user-data-pvc
       containers:
       - name: gpt-model
         image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/red9inja-gpt:latest
@@ -29,6 +33,9 @@ spec:
           name: api
         - containerPort: 7860
           name: web
+        volumeMounts:
+        - name: user-data
+          mountPath: /app/user_data
         resources:
           requests:
             memory: "8Gi"
@@ -57,6 +64,10 @@ spec:
             secretKeyRef:
               name: cognito-secrets
               key: client-id
+        - name: DYNAMODB_CONVERSATIONS_TABLE
+          value: "CLUSTER_NAME-conversations"
+        - name: DYNAMODB_MESSAGES_TABLE
+          value: "CLUSTER_NAME-messages"
         livenessProbe:
           httpGet:
             path: /health
