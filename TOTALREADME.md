@@ -1,6 +1,6 @@
-# 🚀 RED9INJA-GPT-INFRA - INFRASTRUCTURE OVERVIEW
+#  RED9INJA-GPT-INFRA - INFRASTRUCTURE OVERVIEW
 
-## 📁 REPOSITORY STRUCTURE
+##  REPOSITORY STRUCTURE
 
 ```
 ├── terraform/                # Infrastructure as Code
@@ -39,7 +39,7 @@
 
 ---
 
-## 🏗️ AWS INFRASTRUCTURE
+##  AWS INFRASTRUCTURE
 
 ### Network Architecture
 ```
@@ -118,7 +118,7 @@ Secrets Manager
 
 ---
 
-## 🚦 CI/CD PIPELINES
+##  CI/CD PIPELINES
 
 ### 1. Terraform CI/CD (`terraform-cicd.yml`)
 **Trigger**: Push to dev/test/staging/prod branches  
@@ -177,7 +177,7 @@ Secrets Manager
 
 ---
 
-## 💰 COST OPTIMIZATION
+##  COST OPTIMIZATION
 
 ### Multi-Environment Strategy
 
@@ -213,7 +213,7 @@ Secrets Manager
 
 ---
 
-## 🔐 SECURITY ARCHITECTURE
+##  SECURITY ARCHITECTURE
 
 ### Defense in Depth
 
@@ -265,7 +265,7 @@ Layer 5: Data Security
 
 ---
 
-## 📊 MONITORING & OBSERVABILITY
+##  MONITORING & OBSERVABILITY
 
 ### Prometheus Metrics
 ```yaml
@@ -317,7 +317,7 @@ Warning Alarms:
 
 ---
 
-## 🚀 DEPLOYMENT GUIDE
+##  DEPLOYMENT GUIDE
 
 ### Prerequisites
 ```bash
@@ -403,7 +403,7 @@ git push origin prod
 
 ---
 
-## 🔧 TROUBLESHOOTING
+##  TROUBLESHOOTING
 
 ### Common Issues
 
@@ -448,7 +448,7 @@ aws ce get-cost-and-usage --time-period Start=2026-02-01,End=2026-02-08
 
 ---
 
-## 📝 TERRAFORM MODULES
+##  TERRAFORM MODULES
 
 ### VPC Module
 - Creates VPC with public/private subnets
@@ -472,7 +472,7 @@ aws ce get-cost-and-usage --time-period Start=2026-02-01,End=2026-02-08
 
 ---
 
-## 🎯 BEST PRACTICES
+##  BEST PRACTICES
 
 1. **Always use environment branches** (never push to main)
 2. **Review Terraform plan** before applying
@@ -487,7 +487,7 @@ aws ce get-cost-and-usage --time-period Start=2026-02-01,End=2026-02-08
 
 ---
 
-## 📞 SUPPORT
+##  SUPPORT
 
 **Issues**: https://github.com/red9inja/red9inja-GPT-INFRA/issues  
 **Application Repo**: https://github.com/red9inja/red9inja-GPT  
@@ -495,4 +495,4 @@ aws ce get-cost-and-usage --time-period Start=2026-02-01,End=2026-02-08
 
 ---
 
-**Built with ❤️ by red9inja**
+**Built with  by red9inja**

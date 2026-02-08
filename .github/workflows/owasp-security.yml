@@ -77,9 +77,9 @@ jobs:
     steps:
       - name: Create Summary
         run: |
-          echo "## 🔒 OWASP Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "##  OWASP Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Dependency Check**: ${{ needs.dependency-check.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- **ZAP Scan**: ${{ needs.zap-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📊 Download artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
+          echo " Download artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
