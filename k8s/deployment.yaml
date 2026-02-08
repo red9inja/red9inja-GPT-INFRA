@@ -33,6 +33,12 @@ spec:
           name: api
         - containerPort: 7860
           name: web
+        - containerPort: 9090
+          name: metrics
+        annotations:
+          prometheus.io/scrape: "true"
+          prometheus.io/port: "9090"
+          prometheus.io/path: "/metrics"
         volumeMounts:
         - name: user-data
           mountPath: /app/user_data
