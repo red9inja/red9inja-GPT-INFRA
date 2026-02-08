@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: red9inja-gpt-service
+  namespace: default
+  labels:
+    app: red9inja-gpt
+spec:
+  type: LoadBalancer
+  selector:
+    app: red9inja-gpt
+  ports:
+  - name: api
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: web
+    port: 7860
+    targetPort: 7860
+    protocol: TCP

@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: red9inja-gpt
+  namespace: default
+  labels:
+    app: red9inja-gpt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: red9inja-gpt
+  template:
+    metadata:
+      labels:
+        app: red9inja-gpt
+    spec:
+      nodeSelector:
+        workload: gpu
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: gpt-model
+        image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/red9inja-gpt:latest
+        ports:
+        - containerPort: 8000
+          name: api
+        - containerPort: 7860
+          name: web
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "2"
+            nvidia.com/gpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "4"
+            nvidia.com/gpu: "1"
+        env:
+        - name: MODEL_SIZE
+          value: "small"
+        - name: MAX_BATCH_SIZE
+          value: "32"
+        - name: DEVICE
+          value: "cuda"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 5
